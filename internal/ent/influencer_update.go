@@ -14,6 +14,7 @@ import (
 	"github.com/WuPinYi/SocialForge/internal/ent/influencer"
 	"github.com/WuPinYi/SocialForge/internal/ent/post"
 	"github.com/WuPinYi/SocialForge/internal/ent/predicate"
+	"github.com/WuPinYi/SocialForge/internal/ent/user"
 )
 
 // InfluencerUpdate is the builder for updating Influencer entities.
@@ -91,6 +92,17 @@ func (iu *InfluencerUpdate) SetUpdatedAt(t time.Time) *InfluencerUpdate {
 	return iu
 }
 
+// SetOwnerID sets the "owner" edge to the User entity by ID.
+func (iu *InfluencerUpdate) SetOwnerID(id string) *InfluencerUpdate {
+	iu.mutation.SetOwnerID(id)
+	return iu
+}
+
+// SetOwner sets the "owner" edge to the User entity.
+func (iu *InfluencerUpdate) SetOwner(u *User) *InfluencerUpdate {
+	return iu.SetOwnerID(u.ID)
+}
+
 // AddPostIDs adds the "posts" edge to the Post entity by IDs.
 func (iu *InfluencerUpdate) AddPostIDs(ids ...string) *InfluencerUpdate {
 	iu.mutation.AddPostIDs(ids...)
@@ -109,6 +121,12 @@ func (iu *InfluencerUpdate) AddPosts(p ...*Post) *InfluencerUpdate {
 // Mutation returns the InfluencerMutation object of the builder.
 func (iu *InfluencerUpdate) Mutation() *InfluencerMutation {
 	return iu.mutation
+}
+
+// ClearOwner clears the "owner" edge to the User entity.
+func (iu *InfluencerUpdate) ClearOwner() *InfluencerUpdate {
+	iu.mutation.ClearOwner()
+	return iu
 }
 
 // ClearPosts clears all "posts" edges to the Post entity.
@@ -168,7 +186,18 @@ func (iu *InfluencerUpdate) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (iu *InfluencerUpdate) check() error {
+	if iu.mutation.OwnerCleared() && len(iu.mutation.OwnerIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Influencer.owner"`)
+	}
+	return nil
+}
+
 func (iu *InfluencerUpdate) sqlSave(ctx context.Context) (n int, err error) {
+	if err := iu.check(); err != nil {
+		return n, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(influencer.Table, influencer.Columns, sqlgraph.NewFieldSpec(influencer.FieldID, field.TypeString))
 	if ps := iu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -191,6 +220,35 @@ func (iu *InfluencerUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := iu.mutation.UpdatedAt(); ok {
 		_spec.SetField(influencer.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if iu.mutation.OwnerCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   influencer.OwnerTable,
+			Columns: []string{influencer.OwnerColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeString),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := iu.mutation.OwnerIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   influencer.OwnerTable,
+			Columns: []string{influencer.OwnerColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if iu.mutation.PostsCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -319,6 +377,17 @@ func (iuo *InfluencerUpdateOne) SetUpdatedAt(t time.Time) *InfluencerUpdateOne {
 	return iuo
 }
 
+// SetOwnerID sets the "owner" edge to the User entity by ID.
+func (iuo *InfluencerUpdateOne) SetOwnerID(id string) *InfluencerUpdateOne {
+	iuo.mutation.SetOwnerID(id)
+	return iuo
+}
+
+// SetOwner sets the "owner" edge to the User entity.
+func (iuo *InfluencerUpdateOne) SetOwner(u *User) *InfluencerUpdateOne {
+	return iuo.SetOwnerID(u.ID)
+}
+
 // AddPostIDs adds the "posts" edge to the Post entity by IDs.
 func (iuo *InfluencerUpdateOne) AddPostIDs(ids ...string) *InfluencerUpdateOne {
 	iuo.mutation.AddPostIDs(ids...)
@@ -337,6 +406,12 @@ func (iuo *InfluencerUpdateOne) AddPosts(p ...*Post) *InfluencerUpdateOne {
 // Mutation returns the InfluencerMutation object of the builder.
 func (iuo *InfluencerUpdateOne) Mutation() *InfluencerMutation {
 	return iuo.mutation
+}
+
+// ClearOwner clears the "owner" edge to the User entity.
+func (iuo *InfluencerUpdateOne) ClearOwner() *InfluencerUpdateOne {
+	iuo.mutation.ClearOwner()
+	return iuo
 }
 
 // ClearPosts clears all "posts" edges to the Post entity.
@@ -409,7 +484,18 @@ func (iuo *InfluencerUpdateOne) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (iuo *InfluencerUpdateOne) check() error {
+	if iuo.mutation.OwnerCleared() && len(iuo.mutation.OwnerIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Influencer.owner"`)
+	}
+	return nil
+}
+
 func (iuo *InfluencerUpdateOne) sqlSave(ctx context.Context) (_node *Influencer, err error) {
+	if err := iuo.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(influencer.Table, influencer.Columns, sqlgraph.NewFieldSpec(influencer.FieldID, field.TypeString))
 	id, ok := iuo.mutation.ID()
 	if !ok {
@@ -449,6 +535,35 @@ func (iuo *InfluencerUpdateOne) sqlSave(ctx context.Context) (_node *Influencer,
 	}
 	if value, ok := iuo.mutation.UpdatedAt(); ok {
 		_spec.SetField(influencer.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if iuo.mutation.OwnerCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   influencer.OwnerTable,
+			Columns: []string{influencer.OwnerColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeString),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := iuo.mutation.OwnerIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   influencer.OwnerTable,
+			Columns: []string{influencer.OwnerColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if iuo.mutation.PostsCleared() {
 		edge := &sqlgraph.EdgeSpec{

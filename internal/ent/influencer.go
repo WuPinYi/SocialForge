@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/WuPinYi/SocialForge/internal/ent/influencer"
+	"github.com/WuPinYi/SocialForge/internal/ent/user"
 )
 
 // Influencer is the model entity for the Influencer schema.
@@ -31,23 +32,37 @@ type Influencer struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the InfluencerQuery when eager-loading is set.
-	Edges        InfluencerEdges `json:"edges"`
-	selectValues sql.SelectValues
+	Edges            InfluencerEdges `json:"edges"`
+	user_influencers *string
+	selectValues     sql.SelectValues
 }
 
 // InfluencerEdges holds the relations/edges for other nodes in the graph.
 type InfluencerEdges struct {
+	// Owner holds the value of the owner edge.
+	Owner *User `json:"owner,omitempty"`
 	// Posts holds the value of the posts edge.
 	Posts []*Post `json:"posts,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
+}
+
+// OwnerOrErr returns the Owner value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e InfluencerEdges) OwnerOrErr() (*User, error) {
+	if e.Owner != nil {
+		return e.Owner, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "owner"}
 }
 
 // PostsOrErr returns the Posts value or an error if the edge
 // was not loaded in eager-loading.
 func (e InfluencerEdges) PostsOrErr() ([]*Post, error) {
-	if e.loadedTypes[0] {
+	if e.loadedTypes[1] {
 		return e.Posts, nil
 	}
 	return nil, &NotLoadedError{edge: "posts"}
@@ -62,6 +77,8 @@ func (*Influencer) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case influencer.FieldCreatedAt, influencer.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
+		case influencer.ForeignKeys[0]: // user_influencers
+			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -119,6 +136,13 @@ func (i *Influencer) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				i.UpdatedAt = value.Time
 			}
+		case influencer.ForeignKeys[0]:
+			if value, ok := values[j].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field user_influencers", values[j])
+			} else if value.Valid {
+				i.user_influencers = new(string)
+				*i.user_influencers = value.String
+			}
 		default:
 			i.selectValues.Set(columns[j], values[j])
 		}
@@ -130,6 +154,11 @@ func (i *Influencer) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (i *Influencer) Value(name string) (ent.Value, error) {
 	return i.selectValues.Get(name)
+}
+
+// QueryOwner queries the "owner" edge of the Influencer entity.
+func (i *Influencer) QueryOwner() *UserQuery {
+	return NewInfluencerClient(i.config).QueryOwner(i)
 }
 
 // QueryPosts queries the "posts" edge of the Influencer entity.

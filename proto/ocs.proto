@@ -2,9 +2,19 @@ syntax = "proto3";
 
 package ocs.v1;
 
-option go_package = "github.com/yourusername/socialforge/proto/ocs/v1;ocsv1";
+option go_package = "github.com/WuPinYi/SocialForge/proto/ocs/v1;ocsv1";
 
 import "google/protobuf/timestamp.proto";
+
+// User represents a user in the system
+message User {
+  string id = 1;
+  string email = 2;
+  string name = 3;
+  string role = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
 
 // Influencer represents a social media influencer
 message Influencer {
@@ -13,11 +23,12 @@ message Influencer {
   string platform = 3;
   string account_id = 4;
   string status = 5;
-  google.protobuf.Timestamp created_at = 6;
-  google.protobuf.Timestamp updated_at = 7;
+  string owner_id = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
 }
 
-// Post represents a scheduled post
+// Post represents a social media post
 message Post {
   string id = 1;
   string influencer_id = 2;
@@ -28,77 +39,101 @@ message Post {
   google.protobuf.Timestamp updated_at = 7;
 }
 
-// CreateInfluencerRequest represents the request to create a new influencer
+// User Management
+message GetUserRequest {
+  string id = 1;
+}
+
+message GetUserResponse {
+  User user = 1;
+}
+
+message ListUsersRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListUsersResponse {
+  repeated User users = 1;
+  string next_page_token = 2;
+}
+
+message UpdateUserRequest {
+  string id = 1;
+  string name = 2;
+  string role = 3;
+}
+
+message UpdateUserResponse {
+  User user = 1;
+}
+
+// Influencer Management
 message CreateInfluencerRequest {
   string name = 1;
   string platform = 2;
   string account_id = 3;
 }
 
-// CreateInfluencerResponse represents the response after creating an influencer
 message CreateInfluencerResponse {
   Influencer influencer = 1;
 }
 
-// GetInfluencerRequest represents the request to get an influencer
 message GetInfluencerRequest {
   string id = 1;
 }
 
-// GetInfluencerResponse represents the response containing an influencer
 message GetInfluencerResponse {
   Influencer influencer = 1;
 }
 
-// ListInfluencersRequest represents the request to list influencers
 message ListInfluencersRequest {
   int32 page_size = 1;
   string page_token = 2;
 }
 
-// ListInfluencersResponse represents the response containing a list of influencers
 message ListInfluencersResponse {
   repeated Influencer influencers = 1;
   string next_page_token = 2;
 }
 
-// SchedulePostRequest represents the request to schedule a new post
+// Post Management
 message SchedulePostRequest {
   string influencer_id = 1;
   string content = 2;
   google.protobuf.Timestamp scheduled_time = 3;
 }
 
-// SchedulePostResponse represents the response after scheduling a post
 message SchedulePostResponse {
   Post post = 1;
 }
 
-// GetPostRequest represents the request to get a post
 message GetPostRequest {
   string id = 1;
 }
 
-// GetPostResponse represents the response containing a post
 message GetPostResponse {
   Post post = 1;
 }
 
-// ListPostsRequest represents the request to list posts
 message ListPostsRequest {
   string influencer_id = 1;
   int32 page_size = 2;
   string page_token = 3;
 }
 
-// ListPostsResponse represents the response containing a list of posts
 message ListPostsResponse {
   repeated Post posts = 1;
   string next_page_token = 2;
 }
 
-// OpinionControlService defines the gRPC service for managing influencers and posts
+// OpinionControlService provides methods for managing influencers and posts
 service OpinionControlService {
+  // User Management
+  rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {}
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {}
+
   // Influencer Management
   rpc CreateInfluencer(CreateInfluencerRequest) returns (CreateInfluencerResponse) {}
   rpc GetInfluencer(GetInfluencerRequest) returns (GetInfluencerResponse) {}

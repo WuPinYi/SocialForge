@@ -17,12 +17,21 @@ var (
 		{Name: "status", Type: field.TypeString, Default: "active"},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "user_influencers", Type: field.TypeString},
 	}
 	// InfluencersTable holds the schema information for the "influencers" table.
 	InfluencersTable = &schema.Table{
 		Name:       "influencers",
 		Columns:    InfluencersColumns,
 		PrimaryKey: []*schema.Column{InfluencersColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "influencers_users_influencers",
+				Columns:    []*schema.Column{InfluencersColumns[7]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "influencer_platform_account_id",
@@ -67,13 +76,43 @@ var (
 			},
 		},
 	}
+	// UsersColumns holds the columns for the "users" table.
+	UsersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "email", Type: field.TypeString, Unique: true},
+		{Name: "name", Type: field.TypeString},
+		{Name: "auth0_id", Type: field.TypeString, Unique: true},
+		{Name: "role", Type: field.TypeString, Default: "user"},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// UsersTable holds the schema information for the "users" table.
+	UsersTable = &schema.Table{
+		Name:       "users",
+		Columns:    UsersColumns,
+		PrimaryKey: []*schema.Column{UsersColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "user_email",
+				Unique:  true,
+				Columns: []*schema.Column{UsersColumns[1]},
+			},
+			{
+				Name:    "user_auth0_id",
+				Unique:  true,
+				Columns: []*schema.Column{UsersColumns[3]},
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		InfluencersTable,
 		PostsTable,
+		UsersTable,
 	}
 )
 
 func init() {
+	InfluencersTable.ForeignKeys[0].RefTable = UsersTable
 	PostsTable.ForeignKeys[0].RefTable = InfluencersTable
 }

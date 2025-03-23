@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/WuPinYi/SocialForge/internal/ent/influencer"
 	"github.com/WuPinYi/SocialForge/internal/ent/post"
+	"github.com/WuPinYi/SocialForge/internal/ent/user"
 )
 
 // ent aliases to avoid import conflicts in user's code.
@@ -76,6 +77,7 @@ func checkColumn(table, column string) error {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
 			influencer.Table: influencer.ValidColumn,
 			post.Table:       post.ValidColumn,
+			user.Table:       user.ValidColumn,
 		})
 	})
 	return columnCheck(table, column)
