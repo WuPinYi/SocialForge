@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/WuPinYi/SocialForge/internal/ent/influencer"
 	"github.com/WuPinYi/SocialForge/internal/ent/post"
+	"github.com/WuPinYi/SocialForge/internal/ent/user"
 )
 
 // InfluencerCreate is the builder for creating a Influencer entity.
@@ -85,6 +86,17 @@ func (ic *InfluencerCreate) SetNillableUpdatedAt(t *time.Time) *InfluencerCreate
 func (ic *InfluencerCreate) SetID(s string) *InfluencerCreate {
 	ic.mutation.SetID(s)
 	return ic
+}
+
+// SetOwnerID sets the "owner" edge to the User entity by ID.
+func (ic *InfluencerCreate) SetOwnerID(id string) *InfluencerCreate {
+	ic.mutation.SetOwnerID(id)
+	return ic
+}
+
+// SetOwner sets the "owner" edge to the User entity.
+func (ic *InfluencerCreate) SetOwner(u *User) *InfluencerCreate {
+	return ic.SetOwnerID(u.ID)
 }
 
 // AddPostIDs adds the "posts" edge to the Post entity by IDs.
@@ -171,6 +183,9 @@ func (ic *InfluencerCreate) check() error {
 	if _, ok := ic.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Influencer.updated_at"`)}
 	}
+	if len(ic.mutation.OwnerIDs()) == 0 {
+		return &ValidationError{Name: "owner", err: errors.New(`ent: missing required edge "Influencer.owner"`)}
+	}
 	return nil
 }
 
@@ -229,6 +244,23 @@ func (ic *InfluencerCreate) createSpec() (*Influencer, *sqlgraph.CreateSpec) {
 	if value, ok := ic.mutation.UpdatedAt(); ok {
 		_spec.SetField(influencer.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := ic.mutation.OwnerIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   influencer.OwnerTable,
+			Columns: []string{influencer.OwnerColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.user_influencers = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := ic.mutation.PostsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

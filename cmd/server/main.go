@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/WuPinYi/SocialForge/internal/auth"
 	"github.com/WuPinYi/SocialForge/internal/ent"
 	"github.com/WuPinYi/SocialForge/internal/server"
 	"github.com/WuPinYi/SocialForge/internal/worker"
@@ -30,13 +31,19 @@ func main() {
 		log.Fatalf("failed creating schema resources: %v", err)
 	}
 
-	// Create gRPC server
-	lis, err := net.Listen("tcp", ":50051")
+	// Create Auth0 middleware
+	auth0Config := auth.Auth0Config{
+		Domain: os.Getenv("AUTH0_DOMAIN"),
+	}
+	auth0Middleware, err := auth.NewAuth0Middleware(auth0Config)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("failed creating Auth0 middleware: %v", err)
 	}
 
-	s := grpc.NewServer()
+	// Create gRPC server
+	s := grpc.NewServer(
+		grpc.UnaryInterceptor(auth0Middleware.UnaryInterceptor),
+	)
 	ocsv1.RegisterOpinionControlServiceServer(s, server.NewServer(client))
 
 	// Register reflection service for development
@@ -55,12 +62,18 @@ func main() {
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 		<-sigCh
-		log.Println("Shutting down gracefully...")
+		log.Println("Shutting down gRPC server...")
 		cancel()
 		s.GracefulStop()
 	}()
 
-	log.Printf("server listening at %v", lis.Addr())
+	// Start listening
+	lis, err := net.Listen("tcp", ":50051")
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+
+	log.Printf("Server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}

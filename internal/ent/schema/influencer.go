@@ -1,4 +1,4 @@
-//go:generate go run -mod=mod entgo.io/ent/cmd/ent init Influencer
+//go:generate go run -mod=mod entgo.io/ent/cmd/ent generate .
 
 package schema
 
@@ -39,6 +39,10 @@ func (Influencer) Fields() []ent.Field {
 // Edges of the Influencer.
 func (Influencer) Edges() []ent.Edge {
 	return []ent.Edge{
+		edge.From("owner", User.Type).
+			Ref("influencers").
+			Unique().
+			Required(),
 		edge.To("posts", Post.Type),
 	}
 }

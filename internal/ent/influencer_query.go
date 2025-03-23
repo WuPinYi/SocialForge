@@ -15,6 +15,7 @@ import (
 	"github.com/WuPinYi/SocialForge/internal/ent/influencer"
 	"github.com/WuPinYi/SocialForge/internal/ent/post"
 	"github.com/WuPinYi/SocialForge/internal/ent/predicate"
+	"github.com/WuPinYi/SocialForge/internal/ent/user"
 )
 
 // InfluencerQuery is the builder for querying Influencer entities.
@@ -24,7 +25,9 @@ type InfluencerQuery struct {
 	order      []influencer.OrderOption
 	inters     []Interceptor
 	predicates []predicate.Influencer
+	withOwner  *UserQuery
 	withPosts  *PostQuery
+	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -59,6 +62,28 @@ func (iq *InfluencerQuery) Unique(unique bool) *InfluencerQuery {
 func (iq *InfluencerQuery) Order(o ...influencer.OrderOption) *InfluencerQuery {
 	iq.order = append(iq.order, o...)
 	return iq
+}
+
+// QueryOwner chains the current query on the "owner" edge.
+func (iq *InfluencerQuery) QueryOwner() *UserQuery {
+	query := (&UserClient{config: iq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := iq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := iq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(influencer.Table, influencer.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, influencer.OwnerTable, influencer.OwnerColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(iq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // QueryPosts chains the current query on the "posts" edge.
@@ -275,11 +300,23 @@ func (iq *InfluencerQuery) Clone() *InfluencerQuery {
 		order:      append([]influencer.OrderOption{}, iq.order...),
 		inters:     append([]Interceptor{}, iq.inters...),
 		predicates: append([]predicate.Influencer{}, iq.predicates...),
+		withOwner:  iq.withOwner.Clone(),
 		withPosts:  iq.withPosts.Clone(),
 		// clone intermediate query.
 		sql:  iq.sql.Clone(),
 		path: iq.path,
 	}
+}
+
+// WithOwner tells the query-builder to eager-load the nodes that are connected to
+// the "owner" edge. The optional arguments are used to configure the query builder of the edge.
+func (iq *InfluencerQuery) WithOwner(opts ...func(*UserQuery)) *InfluencerQuery {
+	query := (&UserClient{config: iq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	iq.withOwner = query
+	return iq
 }
 
 // WithPosts tells the query-builder to eager-load the nodes that are connected to
@@ -370,11 +407,19 @@ func (iq *InfluencerQuery) prepareQuery(ctx context.Context) error {
 func (iq *InfluencerQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Influencer, error) {
 	var (
 		nodes       = []*Influencer{}
+		withFKs     = iq.withFKs
 		_spec       = iq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
+			iq.withOwner != nil,
 			iq.withPosts != nil,
 		}
 	)
+	if iq.withOwner != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, influencer.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Influencer).scanValues(nil, columns)
 	}
@@ -393,6 +438,12 @@ func (iq *InfluencerQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*I
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := iq.withOwner; query != nil {
+		if err := iq.loadOwner(ctx, query, nodes, nil,
+			func(n *Influencer, e *User) { n.Edges.Owner = e }); err != nil {
+			return nil, err
+		}
+	}
 	if query := iq.withPosts; query != nil {
 		if err := iq.loadPosts(ctx, query, nodes,
 			func(n *Influencer) { n.Edges.Posts = []*Post{} },
@@ -403,6 +454,38 @@ func (iq *InfluencerQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*I
 	return nodes, nil
 }
 
+func (iq *InfluencerQuery) loadOwner(ctx context.Context, query *UserQuery, nodes []*Influencer, init func(*Influencer), assign func(*Influencer, *User)) error {
+	ids := make([]string, 0, len(nodes))
+	nodeids := make(map[string][]*Influencer)
+	for i := range nodes {
+		if nodes[i].user_influencers == nil {
+			continue
+		}
+		fk := *nodes[i].user_influencers
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "user_influencers" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
 func (iq *InfluencerQuery) loadPosts(ctx context.Context, query *PostQuery, nodes []*Influencer, init func(*Influencer), assign func(*Influencer, *Post)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[string]*Influencer)

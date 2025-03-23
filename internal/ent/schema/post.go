@@ -1,4 +1,4 @@
-//go:generate go run -mod=mod entgo.io/ent/cmd/ent init Post
+//go:generate go run -mod=mod entgo.io/ent/cmd/ent generate .
 
 package schema
 

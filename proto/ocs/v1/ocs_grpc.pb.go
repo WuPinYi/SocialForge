@@ -19,6 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	OpinionControlService_GetUser_FullMethodName          = "/ocs.v1.OpinionControlService/GetUser"
+	OpinionControlService_ListUsers_FullMethodName        = "/ocs.v1.OpinionControlService/ListUsers"
+	OpinionControlService_UpdateUser_FullMethodName       = "/ocs.v1.OpinionControlService/UpdateUser"
 	OpinionControlService_CreateInfluencer_FullMethodName = "/ocs.v1.OpinionControlService/CreateInfluencer"
 	OpinionControlService_GetInfluencer_FullMethodName    = "/ocs.v1.OpinionControlService/GetInfluencer"
 	OpinionControlService_ListInfluencers_FullMethodName  = "/ocs.v1.OpinionControlService/ListInfluencers"
@@ -31,8 +34,12 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// OpinionControlService defines the gRPC service for managing influencers and posts
+// OpinionControlService provides methods for managing influencers and posts
 type OpinionControlServiceClient interface {
+	// User Management
+	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
+	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
+	UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
 	// Influencer Management
 	CreateInfluencer(ctx context.Context, in *CreateInfluencerRequest, opts ...grpc.CallOption) (*CreateInfluencerResponse, error)
 	GetInfluencer(ctx context.Context, in *GetInfluencerRequest, opts ...grpc.CallOption) (*GetInfluencerResponse, error)
@@ -49,6 +56,36 @@ type opinionControlServiceClient struct {
 
 func NewOpinionControlServiceClient(cc grpc.ClientConnInterface) OpinionControlServiceClient {
 	return &opinionControlServiceClient{cc}
+}
+
+func (c *opinionControlServiceClient) GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetUserResponse)
+	err := c.cc.Invoke(ctx, OpinionControlService_GetUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *opinionControlServiceClient) ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListUsersResponse)
+	err := c.cc.Invoke(ctx, OpinionControlService_ListUsers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *opinionControlServiceClient) UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateUserResponse)
+	err := c.cc.Invoke(ctx, OpinionControlService_UpdateUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *opinionControlServiceClient) CreateInfluencer(ctx context.Context, in *CreateInfluencerRequest, opts ...grpc.CallOption) (*CreateInfluencerResponse, error) {
@@ -115,8 +152,12 @@ func (c *opinionControlServiceClient) ListPosts(ctx context.Context, in *ListPos
 // All implementations must embed UnimplementedOpinionControlServiceServer
 // for forward compatibility.
 //
-// OpinionControlService defines the gRPC service for managing influencers and posts
+// OpinionControlService provides methods for managing influencers and posts
 type OpinionControlServiceServer interface {
+	// User Management
+	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
+	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
+	UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error)
 	// Influencer Management
 	CreateInfluencer(context.Context, *CreateInfluencerRequest) (*CreateInfluencerResponse, error)
 	GetInfluencer(context.Context, *GetInfluencerRequest) (*GetInfluencerResponse, error)
@@ -135,6 +176,15 @@ type OpinionControlServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedOpinionControlServiceServer struct{}
 
+func (UnimplementedOpinionControlServiceServer) GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUser not implemented")
+}
+func (UnimplementedOpinionControlServiceServer) ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListUsers not implemented")
+}
+func (UnimplementedOpinionControlServiceServer) UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateUser not implemented")
+}
 func (UnimplementedOpinionControlServiceServer) CreateInfluencer(context.Context, *CreateInfluencerRequest) (*CreateInfluencerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateInfluencer not implemented")
 }
@@ -172,6 +222,60 @@ func RegisterOpinionControlServiceServer(s grpc.ServiceRegistrar, srv OpinionCon
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&OpinionControlService_ServiceDesc, srv)
+}
+
+func _OpinionControlService_GetUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpinionControlServiceServer).GetUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpinionControlService_GetUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpinionControlServiceServer).GetUser(ctx, req.(*GetUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpinionControlService_ListUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListUsersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpinionControlServiceServer).ListUsers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpinionControlService_ListUsers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpinionControlServiceServer).ListUsers(ctx, req.(*ListUsersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpinionControlService_UpdateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpinionControlServiceServer).UpdateUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpinionControlService_UpdateUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpinionControlServiceServer).UpdateUser(ctx, req.(*UpdateUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _OpinionControlService_CreateInfluencer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -289,6 +393,18 @@ var OpinionControlService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "ocs.v1.OpinionControlService",
 	HandlerType: (*OpinionControlServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetUser",
+			Handler:    _OpinionControlService_GetUser_Handler,
+		},
+		{
+			MethodName: "ListUsers",
+			Handler:    _OpinionControlService_ListUsers_Handler,
+		},
+		{
+			MethodName: "UpdateUser",
+			Handler:    _OpinionControlService_UpdateUser_Handler,
+		},
 		{
 			MethodName: "CreateInfluencer",
 			Handler:    _OpinionControlService_CreateInfluencer_Handler,
